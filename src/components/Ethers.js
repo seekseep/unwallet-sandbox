@@ -8,7 +8,8 @@ import { Link } from 'react-router-dom'
 export default function UnWallet () {
   const unWalletProviderRef = useRef(null)
   const web3ProviderRef = useRef(null)
-  const [currentAccount, setCurrentAccount] = useState(null)
+  const [currentAccount, setCurrentAccount] = useState('')
+  const [accounts, setAccounts] = useState(null)
   const [message, setMessage] = useState('')
   const [signedMessage, setSignedMessage] = useState(null)
 
@@ -35,15 +36,15 @@ export default function UnWallet () {
       method: 'eth_requestAccounts'
     })
 
-    setCurrentAccount(accounts[0] ?? 'Failed to request accounts')
+    setAccounts(accounts)
   }, [])
 
-  const sign = useCallback(async (message) => {
+  const sign = useCallback(async (currentAccount, message) => {
     if (!web3ProviderRef.current) return
 
     const web3Provider = web3ProviderRef.current
 
-    const signedMessage = await web3Provider.getSigner()._legacySignMessage(message)
+    const signedMessage = await web3Provider.getSigner(currentAccount)._legacySignMessage(message)
 
     setSignedMessage(signedMessage)
   }, [])
@@ -55,8 +56,8 @@ export default function UnWallet () {
 
   const handleSign = useCallback(event => {
     event.preventDefault()
-    sign(message)
-  }, [message])
+    sign(currentAccount, message)
+  }, [currentAccount, message])
 
   return (
     <div className="max-w-2xl mx-auto p-4 pb-6 gap-4 flex flex-col">
@@ -67,16 +68,19 @@ export default function UnWallet () {
 
       <div className="flex flex-col gap-2">
         <div className="font-bold text-2xl">アカウント</div>
-        {currentAccount === null
+        {accounts === null
           ? (
           <form onSubmit={handleRequestAccounts}>
             <button type="submit" className="bg-blue-500 text-center text-white p-2 rounded w-full">アカウントを取得する</button>
           </form>
             )
           : (
-          <div className="bg-gray-100 text-xs p-3 break-words">
-            {currentAccount}
-          </div>
+            <select className="bg-gray-200 rounded p-2 w-full" value={currentAccount} onChange={({ target: { value: currentAccount } }) => setCurrentAccount(currentAccount)}>
+            {currentAccount === '' && <option value="">アカウントを選択してください</option>}
+            {accounts.map(account =>
+              <option key={account} value={account}>{account}</option>
+            )}
+          </select>
             )}
       </div>
 
