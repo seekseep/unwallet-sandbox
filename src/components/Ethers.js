@@ -5,6 +5,8 @@ import { useCallback, useRef, useState, useEffect } from 'react'
 import classNames from 'classnames'
 import { Link } from 'react-router-dom'
 
+import erc1271 from '../abis/ERC1271.json'
+
 export default function UnWallet () {
   const unWalletProviderRef = useRef(null)
   const web3ProviderRef = useRef(null)
@@ -12,6 +14,7 @@ export default function UnWallet () {
   const [accounts, setAccounts] = useState(null)
   const [message, setMessage] = useState('')
   const [signedMessage, setSignedMessage] = useState(null)
+  const [isValid, setIsValid] = useState(false)
 
   useEffect(() => {
     const unWalletProvider = new UnWalletProvider()
@@ -47,6 +50,22 @@ export default function UnWallet () {
     const signedMessage = await web3Provider.getSigner(currentAccount)._legacySignMessage(message)
 
     setSignedMessage(signedMessage)
+
+    const contract = new ethers.Contract(
+      currentAccount,
+      erc1271,
+      new ethers.providers.JsonRpcProvider(
+        'https://polygon-rpc.com/'
+      )
+    )
+
+    try {
+      await contract.isValidSignature(ethers.utils.hashMessage(message), signedMessage)
+      setIsValid(true)
+    } catch (error) {
+      setIsValid(false)
+      throw error
+    }
   }, [])
 
   const handleRequestAccounts = useCallback(event => {
@@ -107,7 +126,22 @@ export default function UnWallet () {
 
       <div className="flex flex-col gap-2">
         <div className="font-bold text-2xl">結果</div>
-        {signedMessage && <div className="bg-gray-100 p-2 text-sm break-words">{signedMessage}</div>}
+        {signedMessage && (
+          <div className="flex flex-col gap-2">
+            <div className="bg-gray-100 p-2 text-sm break-words">{signedMessage}</div>
+            {isValid
+              ? (
+              <div className="bg-green-500 p-2 border-green-600 text-white">
+                正常な署名
+              </div>
+                )
+              : (
+              <div className="bg-red-500 p-2 border-red-600 text-white">
+                異常な署名
+              </div>
+                )}
+          </div>
+        )}
       </div>
     </div>
   )
